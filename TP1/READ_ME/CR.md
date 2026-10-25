@@ -1,3 +1,9 @@
+# Compte Rendus TP1 IA
+_Information importante :_ _Le fichier étant un ``.md`` aucune capture d'écrans ne sera incluses, cependant, afin d'assurer la présentation des différents résultats  
+le fichier ``.ipnyb`` a été inclus et est commenté pour une meilleure lisibilité._
+
+Nordine TSOULI | Yéemen MOUBOUNGOULOU MANIONGUI
+
 ## 1: Data analysis
 
 ### Q1 : According to the code above, deduce :
@@ -5,15 +11,22 @@
 - the size of the images 
 - the number of channels for each image
 
+#### Réponse
 Chaque image possède une taille de 28x28, avec 1 chaîne pour chaque images 
 
 ### Q2 : explain what does what kind of transformations *data_transform* perform.
+
+#### Réponse : 
+
 transforms.Compose applique trois transformations, dans l'ordre :
 
   transforms.ToTensor().
   Convertit l'image PIL (pixels entiers de 0 à 255) en tenseur PyTorch de type float, avec les valeurs mises à l'échelle dans [0, 1].  La forme devient [C, H, W] = [1, 28, 28].
-
+  
+  ````python
   transforms.Normalize(mean=[.5], std=[.5])
+  ````
+  
   Applique (x - 0.5) / 0.5 à chaque pixel, ce qui recentre les valeurs dans [-1, 1]. 
 
   Les données centrées autour de 0 stabilisent et accélèrent généralement l'entraînement.
@@ -39,6 +52,8 @@ for X, y in train_dataloader:
     print(f"Shape of y: {y.shape} {y.dtype}")
 ````
 ### Q3 : What do the variables N and C correspond to? 
+
+#### Réponse : 
 
 Dans [N, C], N est le nombre d'images dans le batch et C le nombre de canaux (channels) de chaque image.
 
@@ -78,11 +93,12 @@ On the other side, the test function is only here to evaluate our model through 
 2. Complete the test loop. 
 
 ### Q4 : What is the fundamental difference between those 2 functions ?
+#### Réponse :
 ```python
 class TinyMLP(nn.Module):
     def __init__(self):
         super(TinyMLP, self).__init__()
-        self.fc1 = nn.Linear(784, 128)   # 28*28 = 784 entrées -> 128 unités cachées
+        self.fc1 = nn.Linear(784, 128)   # 1er layer | 28*28 = 784 entrées -> 128 unités cachées 
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(128, 2)     # 2 classes en sortie
         self.softmax = nn.Softmax(dim=1)
@@ -94,13 +110,66 @@ class TinyMLP(nn.Module):
         x = self.softmax(x)
         return x
 ```
-```train``` met à jour les poids du modèle (rétropropagation + optimizer.step()), alors que test ne fait que les évaluer sans jamais les modifier.
+```train``` met à jour les poids du modèle (rétropropagation + optimizer.step()), alors que ````test```` ne fait que évaluer les erreurs sans jamais les modifier.
   
-__Plotting the training__
+#### __Plotting the training__
 
 By using the matplotlib library, plot both losses (valid and train). 
 
 ### Q5 : Explain and analyse what you observe on the curve ?
 
-Les courbes de loss d'entraînement (bleu) et de validation (orange) décroissent rapidement durant les 10 premières epochs, ce qui montre que le modèle apprend. Après environ 15 epochs, les deux courbes se séparent : la loss d'entraînement continue de diminuer lentement (jusqu'à environ 0,33 à l'epoch 100), tandis que la loss de validation se stabilise autour de 0,355 sans plus s'améliorer. On observe donc un léger surapprentissage : le modèle ajuste de mieux en mieux les données d'entraînement, mais cela ne se traduit plus par un gain en généralisation. L'écart reste faible (environ 0,02) et la loss de validation ne remonte pas, donc le surapprentissage est modéré. Un arrêt plus tôt autour de l'epoch 20-30 aurait donné des performances de validation similaire.
+Les courbes de loss d'entraînement (bleu) et de validation (orange) décroissent rapidement durant les 10 premières epochs,  
+ce qui montre que le modèle apprend. Après environ 15 epochs, les deux courbes se séparent : la loss d'entraînement 
+continue de diminuer lentement (jusqu'à environ 0,33 à l'epoch 100), tandis que la loss de validation se stabilise autour de 0,355 sans plus s'améliorer. 
+On observe donc un léger surapprentissage : le modèle ajuste de mieux en mieux les données d'entraînement, mais cela ne se traduit plus par un gain. 
+L'écart reste faible et la loss de validation ne remonte pas, donc le surapprentissage est modéré. 
+Un arrêt plus tôt autour de l'epoch 20-30 aurait donné des performances de validation similaire.
   
+### Q6 : Which setting of hyperparameters do you think is the most interesting here ? 
+
+#### __Hyperparameter Tuning__ 
+
+As we saw during the course, there are many different hyperparameters than can tuned : number of layers, number of neurons per layer, learning rate etc... 
+Try to modify them and observe their influence on your model.
+
+#### Réponse
+
+Apres quelques ajustement au niveau de la class tinyML afin de passer en parametre les HIDDEN layers,  
+Plusieurs test on été effectués avec differentes valeur de Learning rate de HIDDEN layers.  
+Nous avons comparé 4 réglages (128 ou 256 neurones, lr = 1e-4 ou 1e-2).  
+- Avec lr = 1e-2, la loss de validation oscille fortement et ne converge pas, et avec 512 neurones l’entraînement finit même par se bloquer.  
+- Avec lr = 1e-4, l’apprentissage est stable et la validation se stabilise vers 0,35 après une quinzaine d’epochs, alors que le train continue de baisser (début de surapprentissage).  
+- Les modèles à 128 et 256 neurones donnent des résultats quasi identiques.  
+Nous retenons donc lr = 1e-4 avec 128 neurones, plus léger, et avec un arrêt autour de 15 à 20 epochs.  
+
+### Q7 Evaluate your model by using a correct metric. How do you interpret this metric ?
+
+#### __Evaluating the test dataset__
+
+We now need to evaluate our model. Since we optimized our model using both training and validation datasets, we need to use a new set of data, which we kept as the testing set. It is really important to differentiate these 3 datasets and to not mix them to ensure independence between the model and the evaluated data.
+
+#### Réponse
+
+````python
+my_model.eval()
+tp, fp = 0, 0
+with torch.no_grad():
+    for X, y in test_dataloader:
+        X, y = X.to(device), y.squeeze().long().to(device)
+        pred = my_model(X).argmax(dim=1)
+        tp += ((pred == 1) & (y == 1)).sum().item()
+        fp += ((pred == 1) & (y == 0)).sum().item()
+
+precision = tp / (tp + fp)
+print(f"Précision : {precision:.3f}")
+
+'''
+Ici, 1 correspond à  pneumonie   
+la précision répond à la question quand le modèle annonce une pneumonie, a-t-il raison ? 
+'''
+````
+Nous avons évalué le modèle (128 neurones, lr = 1e-4) sur le jeu de test avec la précision, elle mesure la fiabilité d'une prédiction "pneumonie". Nous obtenons une précisons de 0.827 ce qui indique que quand le modele diagnostique une pneumonie il a raison dans 86% des cas.
+Cependant cette métrique à elle seul n'est pas complétement pertinente car elle ne tient pas compte des pneumonie non détectées (:faux négatifs) il faudrait créer une autre métrique correspondant au rappel, cad qu'elle agit comme un 2nd diagnostique lontemps apres le 1er afin de confirmer ou non la présence d'une pneumonie.
+
+
+
